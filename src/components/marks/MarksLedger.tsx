@@ -18,6 +18,7 @@ import {
   FileDown,
   Trophy,
   UploadCloud,
+  FileEdit,
 } from 'lucide-react';
 
 interface MarksLedgerProps {
@@ -25,7 +26,7 @@ interface MarksLedgerProps {
 }
 
 export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
-  const { summaries, settings, teams, reviews, openImportModal, openMarksImport, resetToDemo } = useData();
+  const { summaries, settings, teams, reviews, openImportModal, openMarksImport, openEditMarks, resetToDemo } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEligibility, setFilterEligibility] = useState<'all' | 'eligible' | 'not_eligible'>('all');
@@ -575,12 +576,23 @@ export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
                       </td>
 
                       <td className="p-3.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => setSelectedScorecard(s)}
-                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
-                        >
-                          View Scorecard
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openEditMarks(s)}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-colors"
+                            title="Edit marks for Review 1, 2, and 3"
+                          >
+                            <FileEdit className="w-3.5 h-3.5" />
+                            <span>Edit Marks</span>
+                          </button>
+
+                          <button
+                            onClick={() => setSelectedScorecard(s)}
+                            className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+                          >
+                            Scorecard
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

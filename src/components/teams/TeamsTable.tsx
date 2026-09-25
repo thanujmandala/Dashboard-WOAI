@@ -11,6 +11,8 @@ import {
   Zap,
   Trash2,
   UploadCloud,
+  Plus,
+  Edit3,
 } from 'lucide-react';
 
 interface TeamsTableProps {
@@ -23,8 +25,9 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
     summaries,
     openTeamDrawer,
     openImportModal,
+    openAddTeam,
+    openEditTeam,
     deleteTeam,
-    resetToDemo,
   } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,11 +112,11 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
       <EmptyState
         icon="spreadsheet"
         title="No Teams in the System"
-        description="Upload your hackathon teams Excel or CSV spreadsheet to begin evaluation, or load demo sample data."
+        description="Upload your hackathon teams Excel or CSV spreadsheet, or register a new team manually."
         actionText="Import Excel / CSV"
         onAction={openImportModal}
-        secondaryActionText="Load Demo Teams"
-        onSecondaryAction={resetToDemo}
+        secondaryActionText="+ Register Team"
+        onSecondaryAction={openAddTeam}
       />
     );
   }
@@ -157,11 +160,19 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
           </div>
 
           <button
+            onClick={openAddTeam}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Team</span>
+          </button>
+
+          <button
             onClick={openImportModal}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 transition-colors"
           >
             <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Import</span>
+            <span>Import Excel</span>
           </button>
         </div>
       </div>
@@ -313,6 +324,14 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
                             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => openEditTeam(team)}
+                            title="Edit Team Details"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+                          >
+                            <Edit3 className="w-4 h-4" />
                           </button>
 
                           <button

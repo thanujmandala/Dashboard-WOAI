@@ -46,6 +46,17 @@ export class StorageService {
     window.dispatchEvent(new Event('woai_data_change'));
   }
 
+  static saveSingleTeam(team: Team) {
+    const teams = this.getTeams();
+    const idx = teams.findIndex((t) => t.id === team.id || t.team_number.trim().toLowerCase() === team.team_number.trim().toLowerCase());
+    if (idx >= 0) {
+      teams[idx] = { ...team, updated_at: new Date().toISOString() };
+    } else {
+      teams.push({ ...team, created_at: team.created_at || new Date().toISOString(), updated_at: new Date().toISOString() });
+    }
+    this.saveTeams(teams);
+  }
+
   static getReviews(): Review[] {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.REVIEWS);

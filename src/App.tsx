@@ -13,13 +13,24 @@ import { QuickEvaluateModal } from './components/dashboard/QuickEvaluateModal';
 import { ReviewEvaluationPage } from './components/reviews/ReviewEvaluationPage';
 import { MarksLedger } from './components/marks/MarksLedger';
 import { MarksImportModal } from './components/marks/MarksImportModal';
+import { AddEditTeamModal } from './components/teams/AddEditTeamModal';
+import { EditMarksModal } from './components/marks/EditMarksModal';
 import { LeaderboardPage } from './components/leaderboard/LeaderboardPage';
 import { GlobalSearchPage } from './components/search/GlobalSearchPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  const { isMarksImportOpen, closeMarksImport } = useData();
+  const {
+    isMarksImportOpen,
+    closeMarksImport,
+    isAddEditTeamOpen,
+    teamToEdit,
+    closeAddEditTeam,
+    isEditMarksOpen,
+    summaryToEditMarks,
+    closeEditMarks,
+  } = useData();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [targetEvaluationTeam, setTargetEvaluationTeam] = useState<string | undefined>(undefined);
@@ -128,6 +139,16 @@ const MainLayout: React.FC = () => {
       <MarksImportModal
         isOpen={isMarksImportOpen}
         onClose={closeMarksImport}
+      />
+      <AddEditTeamModal
+        isOpen={isAddEditTeamOpen}
+        teamToEdit={teamToEdit}
+        onClose={closeAddEditTeam}
+      />
+      <EditMarksModal
+        isOpen={isEditMarksOpen}
+        summary={summaryToEditMarks}
+        onClose={closeEditMarks}
       />
       <QuickEvaluateModal onStartReview={handleStartReview} />
       <ToastContainer />

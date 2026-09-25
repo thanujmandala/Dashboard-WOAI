@@ -197,23 +197,46 @@ export function downloadSampleTemplate(format: 'xlsx' | 'csv' = 'xlsx') {
     {
       'Team Number': 'WOAI-101',
       'Team Name': 'Alpha Vision AI',
-      'Team Member Names': 'Aarav Sharma, Priya Iyer, Rohan Joshi, Sneha Roy',
-      'Problem Statement ID': 'PS-001',
-      'Problem Statement': 'Real-time multi-modal medical diagnostics using edge vision models and offline inference pipelines.',
+      'Team Leader Name': 'Aarav Sharma',
+      'College Name': 'MIT College of Engineering',
+      'Contact Number': '+91 98765 43210',
+      'Euphoria ID': 'EUPH-101',
+      'Problem Statement Number': 'PS-001',
+      'Problem Statement Title': 'Real-time multi-modal medical diagnostics using edge vision models and offline inference pipelines.',
+      'Member 2 Name': 'Priya Iyer',
+      'Member 2 College': 'MIT College of Engineering',
+      'Member 2 Euphoria ID': 'EUPH-102',
+      'Member 3 Name': 'Rohan Joshi',
+      'Member 3 College': 'MIT College of Engineering',
+      'Member 3 Euphoria ID': 'EUPH-103',
+      'Member 4 Name': 'Sneha Roy',
+      'Member 4 College': 'MIT College of Engineering',
+      'Member 4 Euphoria ID': 'EUPH-104',
+      'Member 5 Name': 'Farhan Ali',
+      'Member 5 College': 'MIT College of Engineering',
+      'Member 5 Euphoria ID': 'EUPH-105',
     },
     {
       'Team Number': 'WOAI-102',
       'Team Name': 'RoboHarvest Systems',
-      'Team Member Names': 'Vikramaditya Nair, Tanvi Rao, Arjun Sen',
-      'Problem Statement ID': 'PS-002',
-      'Problem Statement': 'Autonomous drone swarm navigation for precision agriculture and automated pesticide dispenser.',
-    },
-    {
-      'Team Number': 'WOAI-103',
-      'Team Name': 'CyberSentinel X',
-      'Team Member Names': 'Aditya Verma, Neha Gupta, Siddharth Roy, Divya S',
-      'Problem Statement ID': 'PS-003',
-      'Problem Statement': 'Post-quantum cryptographic anomaly detection in distributed high frequency banking systems.',
+      'Team Leader Name': 'Vikramaditya Nair',
+      'College Name': 'PSG Tech Coimbatore',
+      'Contact Number': '+91 98412 11223',
+      'Euphoria ID': 'EUPH-201',
+      'Problem Statement Number': 'PS-002',
+      'Problem Statement Title': 'Autonomous drone swarm navigation for precision agriculture and automated pesticide dispenser.',
+      'Member 2 Name': 'Tanvi Rao',
+      'Member 2 College': 'PSG Tech Coimbatore',
+      'Member 2 Euphoria ID': 'EUPH-202',
+      'Member 3 Name': 'Arjun Sen',
+      'Member 3 College': 'PSG Tech Coimbatore',
+      'Member 3 Euphoria ID': 'EUPH-203',
+      'Member 4 Name': '',
+      'Member 4 College': '',
+      'Member 4 Euphoria ID': '',
+      'Member 5 Name': '',
+      'Member 5 College': '',
+      'Member 5 Euphoria ID': '',
     },
   ];
 
@@ -222,22 +245,33 @@ export function downloadSampleTemplate(format: 'xlsx' | 'csv' = 'xlsx') {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Teams_Template');
     ws['!cols'] = [
+      { wch: 14 },
+      { wch: 24 },
+      { wch: 20 },
+      { wch: 28 },
+      { wch: 18 },
       { wch: 15 },
-      { wch: 25 },
+      { wch: 24 },
       { wch: 45 },
-      { wch: 22 },
-      { wch: 55 },
+      { wch: 18 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 18 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 18 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 18 },
+      { wch: 25 },
+      { wch: 15 },
     ];
     XLSX.writeFile(wb, 'Wonders_of_AI_Teams_Template.xlsx');
   } else {
-    const headers = ['Team Number', 'Team Name', 'Team Member Names', 'Problem Statement ID', 'Problem Statement'];
-    const rows = sampleData.map((d) => [
-      `"${d['Team Number']}"`,
-      `"${d['Team Name']}"`,
-      `"${d['Team Member Names']}"`,
-      `"${d['Problem Statement ID']}"`,
-      `"${d['Problem Statement']}"`,
-    ]);
+    const headers = Object.keys(sampleData[0]);
+    const rows = sampleData.map((d: any) =>
+      headers.map((h) => `"${(d[h] || '').toString().replace(/"/g, '""')}"`)
+    );
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');

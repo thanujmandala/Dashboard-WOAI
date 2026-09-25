@@ -16,6 +16,10 @@ export class SupabaseService {
           team_name,
           problem_statement_id,
           problem_statement,
+          college_name,
+          contact_number,
+          leader_name,
+          leader_euphoria_id,
           is_demo,
           created_at,
           updated_at,
@@ -23,7 +27,10 @@ export class SupabaseService {
             id,
             member_name,
             email,
-            role
+            role,
+            college_name,
+            euphoria_id,
+            contact_number
           )
         `)
         .order('team_number', { ascending: true });
@@ -43,6 +50,10 @@ export class SupabaseService {
         team_name: row.team_name,
         problem_statement_id: row.problem_statement_id || 'PS-TBD',
         problem_statement: row.problem_statement || '',
+        college_name: row.college_name || '',
+        contact_number: row.contact_number || '',
+        leader_name: row.leader_name || '',
+        leader_euphoria_id: row.leader_euphoria_id || '',
         is_demo: Boolean(row.is_demo),
         created_at: row.created_at,
         updated_at: row.updated_at,
@@ -51,6 +62,9 @@ export class SupabaseService {
           name: m.member_name,
           email: m.email || '',
           role: m.role || '',
+          college_name: m.college_name || '',
+          euphoria_id: m.euphoria_id || '',
+          contact_number: m.contact_number || '',
         })),
       }));
     } catch (err) {
@@ -70,6 +84,10 @@ export class SupabaseService {
         team_name: t.team_name,
         problem_statement_id: t.problem_statement_id,
         problem_statement: t.problem_statement,
+        college_name: t.college_name || null,
+        contact_number: t.contact_number || null,
+        leader_name: t.leader_name || null,
+        leader_euphoria_id: t.leader_euphoria_id || null,
         is_demo: Boolean(t.is_demo),
         updated_at: new Date().toISOString(),
       }));
@@ -93,6 +111,9 @@ export class SupabaseService {
             member_name: m.name,
             email: m.email || '',
             role: m.role || '',
+            college_name: m.college_name || '',
+            euphoria_id: m.euphoria_id || '',
+            contact_number: m.contact_number || '',
           });
         });
       });
@@ -114,8 +135,56 @@ export class SupabaseService {
     }
   }
 
+  static async saveSingleTeam(team: Team): Promise<boolean> {
+    try {
+      // 1. Upsert team row
+      const { error: teamError } = await supabase.from('teams').upsert({
+        id: team.id,
+        team_number: team.team_number,
+        team_name: team.team_name,
+        problem_statement_id: team.problem_statement_id,
+        problem_statement: team.problem_statement,
+        college_name: team.college_name || null,
+        contact_number: team.contact_number || null,
+        leader_name: team.leader_name || null,
+        leader_euphoria_id: team.leader_euphoria_id || null,
+        is_demo: Boolean(team.is_demo),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'team_number' });
+
+      if (teamError) {
+        console.error('Error saving team:', teamError);
+        return false;
+      }
+
+      // 2. Delete existing members for this team and insert updated members
+      await supabase.from('team_members').delete().eq('team_id', team.id);
+
+      if (team.members && team.members.length > 0) {
+        const memberRows = team.members.map((m, idx) => ({
+          id: m.id || `m-${team.id}-${idx}-${Date.now()}`,
+          team_id: team.id,
+          member_name: m.name,
+          email: m.email || '',
+          role: m.role || '',
+          college_name: m.college_name || '',
+          euphoria_id: m.euphoria_id || '',
+          contact_number: m.contact_number || '',
+        }));
+
+        await supabase.from('team_members').insert(memberRows);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('saveSingleTeam error:', err);
+      return false;
+    }
+  }
+
   static async deleteTeam(teamId: string): Promise<boolean> {
     try {
+      await supabase.from('team_members').delete().eq('team_id', teamId);
       const { error } = await supabase.from('teams').delete().eq('id', teamId);
       if (error) {
         console.error('Error deleting team:', error);

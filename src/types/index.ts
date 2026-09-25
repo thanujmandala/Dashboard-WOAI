@@ -12,6 +12,9 @@ export interface TeamMember {
   name: string;
   email?: string;
   role?: string;
+  college_name?: string;
+  euphoria_id?: string;
+  contact_number?: string;
 }
 
 export interface Team {
@@ -20,6 +23,10 @@ export interface Team {
   team_name: string;
   problem_statement_id: string;
   problem_statement: string;
+  college_name?: string;
+  contact_number?: string;
+  leader_name?: string;
+  leader_euphoria_id?: string;
   members: TeamMember[];
   is_demo?: boolean;
   created_at: string;

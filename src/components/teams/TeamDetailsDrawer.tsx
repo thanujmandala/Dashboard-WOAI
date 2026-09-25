@@ -14,6 +14,10 @@ import {
   Lock,
   Unlock,
   History,
+  Edit3,
+  Building2,
+  Phone,
+  FileEdit,
 } from 'lucide-react';
 
 interface TeamDetailsDrawerProps {
@@ -24,6 +28,8 @@ export const TeamDetailsDrawer: React.FC<TeamDetailsDrawerProps> = ({ onStartRev
   const {
     selectedTeamForDrawer,
     closeTeamDrawer,
+    openEditTeam,
+    openEditMarks,
     summaries,
     settings,
     auditLogs,
@@ -65,34 +71,99 @@ export const TeamDetailsDrawer: React.FC<TeamDetailsDrawerProps> = ({ onStartRev
             <h2 className="text-xl font-bold text-white tracking-tight">{team.team_name}</h2>
           </div>
 
-          <button
-            onClick={closeTeamDrawer}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            aria-label="Close team drawer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                closeTeamDrawer();
+                openEditTeam(team);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-colors"
+              title="Edit full team profile"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Edit Details</span>
+            </button>
+
+            <button
+              onClick={closeTeamDrawer}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Close team drawer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Drawer Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Team Metadata (College, Contact) */}
+          {(team.college_name || team.contact_number) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {team.college_name && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+                  <Building2 className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="text-slate-300 truncate">{team.college_name}</span>
+                </div>
+              )}
+              {team.contact_number && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+                  <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-slate-300 font-mono">{team.contact_number}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Members & Problem Statement */}
           <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 space-y-4">
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-indigo-400" /> Team Members ({team.members.length})
+                <User className="w-3.5 h-3.5 text-indigo-400" /> Team Members ({team.members.length}/5)
               </h4>
-              <div className="flex flex-wrap gap-2">
-                {team.members.map((m, idx) => (
-                  <div
-                    key={m.id || idx}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-medium text-slate-200"
-                  >
-                    <div className="w-2 h-2 rounded-full bg-indigo-400" />
-                    <span>{m.name}</span>
-                    {m.role && <span className="text-[10px] text-slate-400 font-normal">({m.role})</span>}
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {team.members.map((m, idx) => {
+                  const isLead = m.role?.toLowerCase().includes('lead') || idx === 0;
+                  return (
+                    <div
+                      key={m.id || idx}
+                      className={`p-3 rounded-xl border text-xs space-y-1 ${
+                        isLead
+                          ? 'bg-indigo-950/30 border-indigo-500/30 text-slate-200'
+                          : 'bg-slate-950 border-slate-800 text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 font-bold text-white">
+                          <div className={`w-2 h-2 rounded-full ${isLead ? 'bg-indigo-400' : 'bg-slate-500'}`} />
+                          <span>{m.name}</span>
+                        </div>
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${
+                          isLead
+                            ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {m.role || (isLead ? 'Leader' : `Member ${idx + 1}`)}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-400 pt-0.5">
+                        {m.euphoria_id && (
+                          <span className="font-mono text-purple-300 bg-purple-500/10 px-1 rounded border border-purple-500/20">
+                            {m.euphoria_id}
+                          </span>
+                        )}
+                        {(m.college_name || team.college_name) && (
+                          <span className="truncate max-w-[150px]">
+                            {m.college_name || team.college_name}
+                          </span>
+                        )}
+                        {m.contact_number && (
+                          <span className="font-mono text-slate-400">{m.contact_number}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -112,15 +183,26 @@ export const TeamDetailsDrawer: React.FC<TeamDetailsDrawerProps> = ({ onStartRev
               <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-300">
                 Overall Scorecard Summary
               </h4>
-              <span
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${
-                  summary?.isEligibleForFinale
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                    : 'bg-slate-800 text-slate-300 border-slate-700'
-                }`}
-              >
-                {summary?.isEligibleForFinale ? 'Eligible for Finale' : summary?.statusText || 'Pending'}
-              </span>
+              <div className="flex items-center gap-2">
+                {summary && (
+                  <button
+                    onClick={() => openEditMarks(summary)}
+                    className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 transition-colors"
+                  >
+                    <FileEdit className="w-3 h-3" />
+                    <span>Edit Marks</span>
+                  </button>
+                )}
+                <span
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${
+                    summary?.isEligibleForFinale
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-slate-800 text-slate-300 border-slate-700'
+                  }`}
+                >
+                  {summary?.isEligibleForFinale ? 'Eligible for Finale' : summary?.statusText || 'Pending'}
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">

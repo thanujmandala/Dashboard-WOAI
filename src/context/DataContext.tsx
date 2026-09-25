@@ -55,7 +55,19 @@ interface DataContextType {
   openMarksImport: () => void;
   closeMarksImport: () => void;
 
+  isAddEditTeamOpen: boolean;
+  teamToEdit: Team | null;
+  openAddTeam: () => void;
+  openEditTeam: (team: Team) => void;
+  closeAddEditTeam: () => void;
+
+  isEditMarksOpen: boolean;
+  summaryToEditMarks: TeamScoreSummary | null;
+  openEditMarks: (summary: TeamScoreSummary) => void;
+  closeEditMarks: () => void;
+
   // Actions
+  saveTeamAction: (team: Team) => Promise<void>;
   saveReview: (review: Review) => Promise<Review>;
   unlockReview: (teamId: string, reviewNumber: 1 | 2 | 3, reason: string) => Promise<boolean>;
   importTeams: (newTeams: Team[], mode: 'append' | 'replace' | 'overwrite') => Promise<{ added: number; updated: number; skipped: number }>;
@@ -84,6 +96,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isQuickEvaluateOpen, setIsQuickEvaluateOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMarksImportOpen, setIsMarksImportOpen] = useState(false);
+
+  const [isAddEditTeamOpen, setIsAddEditTeamOpen] = useState(false);
+  const [teamToEdit, setTeamToEdit] = useState<Team | null>(null);
+
+  const [isEditMarksOpen, setIsEditMarksOpen] = useState(false);
+  const [summaryToEditMarks, setSummaryToEditMarks] = useState<TeamScoreSummary | null>(null);
 
   // Load all data from Supabase, fallback to localStorage
   const loadAll = useCallback(async () => {
@@ -385,6 +403,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openMarksImport = () => setIsMarksImportOpen(true);
   const closeMarksImport = () => setIsMarksImportOpen(false);
 
+  const openAddTeam = () => {
+    setTeamToEdit(null);
+    setIsAddEditTeamOpen(true);
+  };
+
+  const openEditTeam = (team: Team) => {
+    setTeamToEdit(team);
+    setIsAddEditTeamOpen(true);
+  };
+
+  const closeAddEditTeam = () => {
+    setIsAddEditTeamOpen(false);
+    setTeamToEdit(null);
+  };
+
+  const saveTeamAction = async (team: Team) => {
+    if (isSupabaseConfigured) {
+      await SupabaseService.saveSingleTeam(team);
+    }
+    StorageService.saveSingleTeam(team);
+    await loadAll();
+    showToast(
+      teamToEdit ? 'Team Updated' : 'Team Registered',
+      `Team ${team.team_number} (${team.team_name}) saved successfully.`,
+      'success'
+    );
+  };
+
+  const openEditMarks = (summary: TeamScoreSummary) => {
+    setSummaryToEditMarks(summary);
+    setIsEditMarksOpen(true);
+  };
+
+  const closeEditMarks = () => {
+    setIsEditMarksOpen(false);
+    setSummaryToEditMarks(null);
+  };
+
   // Import marks directly from Excel — creates reviews for each team/round
   const importMarksFromExcel = async (
     rows: { team_number: string; r1?: number | null; r2?: number | null; r3?: number | null }[]
@@ -468,6 +524,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isMarksImportOpen,
         openMarksImport,
         closeMarksImport,
+        isAddEditTeamOpen,
+        teamToEdit,
+        openAddTeam,
+        openEditTeam,
+        closeAddEditTeam,
+        saveTeamAction,
+        isEditMarksOpen,
+        summaryToEditMarks,
+        openEditMarks,
+        closeEditMarks,
         saveReview,
         unlockReview,
         importTeams,
