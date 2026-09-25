@@ -134,13 +134,20 @@ export const AddEditTeamModal: React.FC<AddEditTeamModalProps> = ({
     if (!teamName.trim()) newErrors.teamName = 'Team Name is required';
     if (!leaderName.trim()) newErrors.leaderName = 'Team Leader Name is required';
 
-    // Check duplicate team number if adding new
+    // Check duplicate team number
     if (!teamToEdit) {
       const isDuplicate = teams.some(
         (t) => t.team_number.trim().toUpperCase() === teamNumber.trim().toUpperCase()
       );
       if (isDuplicate) {
         newErrors.teamNumber = `Team number "${teamNumber.trim()}" already exists!`;
+      }
+    } else {
+      const isDuplicate = teams.some(
+        (t) => t.id !== teamToEdit.id && t.team_number.trim().toUpperCase() === teamNumber.trim().toUpperCase()
+      );
+      if (isDuplicate) {
+        newErrors.teamNumber = `Team number "${teamNumber.trim()}" is already assigned to another team!`;
       }
     }
 

@@ -137,8 +137,7 @@ export class SupabaseService {
 
   static async saveSingleTeam(team: Team): Promise<boolean> {
     try {
-      // 1. Upsert team row
-      const { error: teamError } = await supabase.from('teams').upsert({
+      const teamRow = {
         id: team.id,
         team_number: team.team_number,
         team_name: team.team_name,
@@ -150,11 +149,62 @@ export class SupabaseService {
         leader_euphoria_id: team.leader_euphoria_id || null,
         is_demo: Boolean(team.is_demo),
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'team_number' });
+      };
 
-      if (teamError) {
-        console.error('Error saving team:', teamError);
-        return false;
+      // 1. Check if team exists by id
+      const { data: existingById } = await supabase
+        .from('teams')
+        .select('id, team_number')
+        .eq('id', team.id)
+        .maybeSingle();
+
+      if (existingById) {
+        // Update existing team by id (allows changing team_number freely)
+        const { error: updateError } = await supabase
+          .from('teams')
+          .update(teamRow)
+          .eq('id', team.id);
+
+        if (updateError) {
+          console.error('Error updating team by ID:', updateError);
+          return false;
+        }
+
+        // Keep reviews synchronized if team_number was updated
+        if (existingById.team_number !== team.team_number) {
+          await supabase
+            .from('reviews')
+            .update({ team_number: team.team_number, updated_at: new Date().toISOString() })
+            .eq('team_id', team.id);
+        }
+      } else {
+        // Check if there is already a team with this team_number
+        const { data: existingByNum } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('team_number', team.team_number)
+          .maybeSingle();
+
+        if (existingByNum) {
+          const { error: updateError } = await supabase
+            .from('teams')
+            .update({ ...teamRow, id: existingByNum.id })
+            .eq('id', existingByNum.id);
+
+          if (updateError) {
+            console.error('Error updating team by number:', updateError);
+            return false;
+          }
+        } else {
+          const { error: insertError } = await supabase
+            .from('teams')
+            .insert(teamRow);
+
+          if (insertError) {
+            console.error('Error inserting team:', insertError);
+            return false;
+          }
+        }
       }
 
       // 2. Delete existing members for this team and insert updated members

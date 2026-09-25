@@ -48,11 +48,32 @@ export class StorageService {
 
   static saveSingleTeam(team: Team) {
     const teams = this.getTeams();
-    const idx = teams.findIndex((t) => t.id === team.id || t.team_number.trim().toLowerCase() === team.team_number.trim().toLowerCase());
+    const idx = teams.findIndex((t) => t.id === team.id);
     if (idx >= 0) {
+      const oldTeamNumber = teams[idx].team_number;
       teams[idx] = { ...team, updated_at: new Date().toISOString() };
+      
+      // Update reviews if team number changed
+      if (oldTeamNumber !== team.team_number) {
+        const reviews = this.getReviews();
+        let changed = false;
+        reviews.forEach((r) => {
+          if (r.team_id === team.id) {
+            r.team_number = team.team_number;
+            changed = true;
+          }
+        });
+        if (changed) {
+          this.saveReviews(reviews);
+        }
+      }
     } else {
-      teams.push({ ...team, created_at: team.created_at || new Date().toISOString(), updated_at: new Date().toISOString() });
+      const byNumIdx = teams.findIndex((t) => t.team_number.trim().toLowerCase() === team.team_number.trim().toLowerCase());
+      if (byNumIdx >= 0) {
+        teams[byNumIdx] = { ...team, updated_at: new Date().toISOString() };
+      } else {
+        teams.push({ ...team, created_at: team.created_at || new Date().toISOString(), updated_at: new Date().toISOString() });
+      }
     }
     this.saveTeams(teams);
   }
