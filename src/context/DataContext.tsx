@@ -51,10 +51,15 @@ interface DataContextType {
   openImportModal: () => void;
   closeImportModal: () => void;
 
+  isMarksImportOpen: boolean;
+  openMarksImport: () => void;
+  closeMarksImport: () => void;
+
   // Actions
   saveReview: (review: Review) => Promise<Review>;
   unlockReview: (teamId: string, reviewNumber: 1 | 2 | 3, reason: string) => Promise<boolean>;
   importTeams: (newTeams: Team[], mode: 'append' | 'replace' | 'overwrite') => Promise<{ added: number; updated: number; skipped: number }>;
+  importMarksFromExcel: (rows: { team_number: string; r1?: number | null; r2?: number | null; r3?: number | null }[]) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
   updateSettings: (newSettings: CompetitionSettings) => Promise<void>;
   resetToDemo: () => Promise<void>;
@@ -78,6 +83,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedTeamForDrawer, setSelectedTeamForDrawer] = useState<Team | null>(null);
   const [isQuickEvaluateOpen, setIsQuickEvaluateOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isMarksImportOpen, setIsMarksImportOpen] = useState(false);
 
   // Load all data from Supabase, fallback to localStorage
   const loadAll = useCallback(async () => {
@@ -376,6 +382,65 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openImportModal = () => setIsImportModalOpen(true);
   const closeImportModal = () => setIsImportModalOpen(false);
 
+  const openMarksImport = () => setIsMarksImportOpen(true);
+  const closeMarksImport = () => setIsMarksImportOpen(false);
+
+  // Import marks directly from Excel — creates reviews for each team/round
+  const importMarksFromExcel = async (
+    rows: { team_number: string; r1?: number | null; r2?: number | null; r3?: number | null }[]
+  ): Promise<void> => {
+    const judgeUser = user?.username || 'admin1';
+    const teamMap = new Map(teams.map(t => [t.team_number.trim().toUpperCase(), t]));
+
+    for (const row of rows) {
+      const team = teamMap.get(row.team_number.trim().toUpperCase());
+      if (!team) continue;
+
+      const makeReview = (reviewNumber: 1 | 2 | 3, score: number, maxScore: number): Review => ({
+        id: `rev-import-${team.id}-${reviewNumber}-${Date.now()}`,
+        team_id: team.id,
+        team_number: team.team_number,
+        review_number: reviewNumber,
+        judge_id: `judge-${judgeUser}`,
+        judge_username: judgeUser,
+        scores: [],
+        total_score: score,
+        max_possible_score: maxScore,
+        comments: 'Imported from Excel',
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_locked: true,
+      });
+
+      if (row.r1 !== null && row.r1 !== undefined) {
+        const rev = makeReview(1, row.r1, settings.review_1_max || 50);
+        await SupabaseService.saveReview(rev, judgeUser);
+        StorageService.saveSingleReview(rev, judgeUser);
+      }
+      if (row.r2 !== null && row.r2 !== undefined) {
+        const rev = makeReview(2, row.r2, settings.review_2_max || 50);
+        await SupabaseService.saveReview(rev, judgeUser);
+        StorageService.saveSingleReview(rev, judgeUser);
+      }
+      if (row.r3 !== null && row.r3 !== undefined) {
+        const rev = makeReview(3, row.r3, settings.review_3_max || 100);
+        await SupabaseService.saveReview(rev, judgeUser);
+        StorageService.saveSingleReview(rev, judgeUser);
+      }
+    }
+
+    await SupabaseService.addAuditLog({
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      judge_username: judgeUser,
+      action: 'data_import',
+      details: `Imported marks for ${rows.length} teams from Excel spreadsheet.`,
+    });
+
+    await loadAll();
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -400,9 +465,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isImportModalOpen,
         openImportModal,
         closeImportModal,
+        isMarksImportOpen,
+        openMarksImport,
+        closeMarksImport,
         saveReview,
         unlockReview,
         importTeams,
+        importMarksFromExcel,
         deleteTeam,
         updateSettings,
         resetToDemo,

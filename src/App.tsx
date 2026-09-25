@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { Sidebar } from './components/common/Sidebar';
 import { Header } from './components/common/Header';
@@ -12,12 +12,14 @@ import { ExcelImportModal } from './components/teams/ExcelImportModal';
 import { QuickEvaluateModal } from './components/dashboard/QuickEvaluateModal';
 import { ReviewEvaluationPage } from './components/reviews/ReviewEvaluationPage';
 import { MarksLedger } from './components/marks/MarksLedger';
+import { MarksImportModal } from './components/marks/MarksImportModal';
 import { LeaderboardPage } from './components/leaderboard/LeaderboardPage';
 import { GlobalSearchPage } from './components/search/GlobalSearchPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { isMarksImportOpen, closeMarksImport } = useData();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [targetEvaluationTeam, setTargetEvaluationTeam] = useState<string | undefined>(undefined);
@@ -123,6 +125,10 @@ const MainLayout: React.FC = () => {
 
       <TeamDetailsDrawer onStartReview={handleStartReview} />
       <ExcelImportModal />
+      <MarksImportModal
+        isOpen={isMarksImportOpen}
+        onClose={closeMarksImport}
+      />
       <QuickEvaluateModal onStartReview={handleStartReview} />
       <ToastContainer />
     </div>

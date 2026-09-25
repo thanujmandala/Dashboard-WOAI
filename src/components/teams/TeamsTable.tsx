@@ -185,24 +185,14 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
               <thead className="bg-slate-950 font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                 <tr>
                   <th
-                    onClick={() => toggleSort('number')}
-                    className="p-3.5 cursor-pointer hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span>Team No.</span>
-                      <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                    </div>
-                  </th>
-                  <th
                     onClick={() => toggleSort('name')}
-                    className="p-3.5 cursor-pointer hover:text-white transition-colors"
+                    className="p-3.5 cursor-pointer hover:text-white transition-colors min-w-[260px]"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>Team Name</span>
+                      <span>Team (No. · Name · Members)</span>
                       <ArrowUpDown className="w-3 h-3 text-slate-500" />
                     </div>
                   </th>
-                  <th className="p-3.5">Members</th>
                   <th
                     onClick={() => toggleSort('ps_id')}
                     className="p-3.5 cursor-pointer hover:text-white transition-colors"
@@ -227,26 +217,35 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
                       className="hover:bg-slate-800/50 transition-colors group cursor-pointer"
                       onClick={() => openTeamDrawer(team)}
                     >
-                      <td className="p-3.5 font-mono font-bold text-indigo-400 whitespace-nowrap">
-                        {team.team_number}
-                      </td>
-
-                      <td className="p-3.5 font-bold text-white whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span>{team.team_name}</span>
-                          {team.is_demo && (
-                            <span className="px-1.5 py-0.2 text-[9px] font-bold rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                              Demo
+                      <td className="p-3.5 font-bold text-white">
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[11px] text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded">
+                              {team.team_number}
                             </span>
+                            <span className="font-bold text-white">{team.team_name}</span>
+                            {team.is_demo && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                Demo
+                              </span>
+                            )}
+                          </div>
+                          {/* Member pills */}
+                          {team.members.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {team.members.map((m: any, i: number) => (
+                                <span
+                                  key={i}
+                                  className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-800 text-slate-300 border border-slate-700"
+                                >
+                                  {m.name}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </td>
 
-                      <td className="p-3.5 max-w-[180px]">
-                        <div className="truncate text-slate-300">
-                          {team.members.map((m: any) => m.name).join(', ')}
-                        </div>
-                      </td>
 
                       <td className="p-3.5 font-mono text-slate-400 whitespace-nowrap">
                         <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[11px]">

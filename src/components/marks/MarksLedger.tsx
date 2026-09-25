@@ -17,6 +17,7 @@ import {
   FileText,
   FileDown,
   Trophy,
+  UploadCloud,
 } from 'lucide-react';
 
 interface MarksLedgerProps {
@@ -24,7 +25,7 @@ interface MarksLedgerProps {
 }
 
 export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
-  const { summaries, settings, teams, reviews, openImportModal, resetToDemo } = useData();
+  const { summaries, settings, teams, reviews, openImportModal, openMarksImport, resetToDemo } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEligibility, setFilterEligibility] = useState<'all' | 'eligible' | 'not_eligible'>('all');
@@ -192,6 +193,15 @@ export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={openMarksImport}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition-all shadow-sm"
+              title="Import marks directly from an Excel / CSV spreadsheet"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>Import Marks</span>
+            </button>
+
             <button
               onClick={() => exportMarksToExcel(filteredSummaries, settings)}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition-all shadow-sm"
