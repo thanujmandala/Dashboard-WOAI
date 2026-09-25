@@ -461,15 +461,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSummaryToEditMarks(null);
   };
 
+  const findTeamForImport = (teamNumOrName: string): Team | undefined => {
+    if (!teamNumOrName) return undefined;
+    const clean = teamNumOrName.trim().toUpperCase();
+    // 1. Exact match
+    const exact = teams.find(t => t.team_number.trim().toUpperCase() === clean);
+    if (exact) return exact;
+
+    // 2. Normalized alphanumerics match (e.g. WOAI-101 matches 101, WOAI101, etc.)
+    const alphaNumClean = clean.replace(/[^A-Z0-9]/g, '');
+    const normMatch = teams.find(t => {
+      const tClean = t.team_number.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      return tClean === alphaNumClean || tClean.endsWith(alphaNumClean) || alphaNumClean.endsWith(tClean);
+    });
+    if (normMatch) return normMatch;
+
+    // 3. Match by Team Name
+    const nameMatch = teams.find(t => t.team_name.trim().toUpperCase() === clean);
+    return nameMatch;
+  };
+
   // Import marks directly from Excel — creates reviews for each team/round
   const importMarksFromExcel = async (
     rows: { team_number: string; r1?: number | null; r2?: number | null; r3?: number | null }[]
   ): Promise<void> => {
     const judgeUser = user?.username || 'admin1';
-    const teamMap = new Map(teams.map(t => [t.team_number.trim().toUpperCase(), t]));
 
     for (const row of rows) {
-      const team = teamMap.get(row.team_number.trim().toUpperCase());
+      const team = findTeamForImport(row.team_number);
       if (!team) continue;
 
       const makeReview = (reviewNumber: 1 | 2 | 3, score: number, maxScore: number): Review => ({
@@ -521,11 +540,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     records: DetailedReviewImportRecord[]
   ): Promise<void> => {
     const judgeUser = user?.username || 'admin1';
-    const teamMap = new Map(teams.map(t => [t.team_number.trim().toUpperCase(), t]));
     let importedCount = 0;
 
     for (const rec of records) {
-      const team = teamMap.get(rec.team_number.trim().toUpperCase());
+      const team = findTeamForImport(rec.team_number);
       if (!team) continue;
 
       const reviewItem: Review = {

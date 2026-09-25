@@ -3,7 +3,7 @@ import { useData, type DetailedReviewImportRecord, type RubricImportScore } from
 import { useAuth } from '../../context/AuthContext';
 import { REVIEW_1_RUBRICS, REVIEW_2_RUBRICS, REVIEW_3_RUBRICS } from '../../constants/rubrics';
 import { downloadReviewMarksTemplate } from '../../utils/exporter';
-import type { CriterionRubric } from '../../types';
+import type { CriterionRubric, Team } from '../../types';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import {
@@ -19,12 +19,14 @@ import {
   Trophy,
   Check,
   Info,
+  AlertTriangle,
 } from 'lucide-react';
 
 type SelectedReviewMode = 1 | 2 | 3 | 'all';
 
 interface ParsedReviewRow {
   team_number: string;
+  matched_team?: Team;
   team_name?: string;
   rubric_scores: RubricImportScore[];
   total_score: number;
@@ -56,8 +58,6 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
   const [teamNameCol, setTeamNameCol] = useState('');
   const [commentsCol, setCommentsCol] = useState('');
   const [judgeCol, setJudgeCol] = useState('');
-
-  if (!isOpen) return null;
   const [totalScoreCol, setTotalScoreCol] = useState('');
 
   // Per-rubric mappings (criterion_id -> header)
@@ -124,6 +124,26 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
     onClose();
   };
 
+  const findMatchingTeam = (rawNum: string): Team | undefined => {
+    if (!rawNum) return undefined;
+    const clean = rawNum.trim().toUpperCase();
+    // 1. Exact match
+    const exact = teams.find((t) => t.team_number.trim().toUpperCase() === clean);
+    if (exact) return exact;
+
+    // 2. Normalized alphanumerics match
+    const alphaClean = clean.replace(/[^A-Z0-9]/g, '');
+    const norm = teams.find((t) => {
+      const tClean = t.team_number.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      return tClean === alphaClean || tClean.endsWith(alphaClean) || alphaClean.endsWith(tClean);
+    });
+    if (norm) return norm;
+
+    // 3. Match by Team Name
+    const nameMatch = teams.find((t) => t.team_name.trim().toUpperCase() === clean);
+    return nameMatch;
+  };
+
   // ── Auto-Detect Columns ───────────────────────────────────────────
   const autoDetectColumns = (headers: string[], reviewMode: SelectedReviewMode) => {
     let tNum = '';
@@ -147,35 +167,43 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
           clean.includes('team_id') ||
           clean.includes('team_no') ||
           clean === 'team' ||
-          clean.includes('team #'))
+          clean.includes('team #') ||
+          clean === 't_no' ||
+          clean === 't.no')
       ) {
         tNum = h;
       }
       // Team Name
-      else if (!tName && (clean.includes('team name') || clean.includes('project name'))) {
+      else if (
+        !tName &&
+        (clean.includes('team name') || clean.includes('project name') || clean.includes('project title'))
+      ) {
         tName = h;
       }
       // Comments / Remarks
-      else if (!comm && (clean.includes('comment') || clean.includes('remark') || clean.includes('feedback'))) {
+      else if (
+        !comm &&
+        (clean.includes('comment') || clean.includes('remark') || clean.includes('feedback') || clean.includes('note'))
+      ) {
         comm = h;
       }
       // Judge Username
-      else if (!judge && (clean.includes('judge') || clean.includes('evaluator'))) {
+      else if (!judge && (clean.includes('judge') || clean.includes('evaluator') || clean.includes('reviewer'))) {
         judge = h;
       }
       // All-in-one columns
       else if (clean.includes('r1') || clean.includes('review 1') || clean.includes('prelim')) {
         if (!r1C) r1C = h;
-        if (reviewMode === 1 && !tot && (clean.includes('total') || clean.includes('score'))) tot = h;
+        if (reviewMode === 1 && !tot && (clean.includes('total') || clean.includes('score') || clean.includes('mark'))) tot = h;
       } else if (clean.includes('r2') || clean.includes('review 2') || clean.includes('main')) {
         if (!r2C) r2C = h;
-        if (reviewMode === 2 && !tot && (clean.includes('total') || clean.includes('score'))) tot = h;
+        if (reviewMode === 2 && !tot && (clean.includes('total') || clean.includes('score') || clean.includes('mark'))) tot = h;
       } else if (clean.includes('r3') || clean.includes('review 3') || clean.includes('finale')) {
         if (!r3C) r3C = h;
-        if (reviewMode === 3 && !tot && (clean.includes('total') || clean.includes('score'))) tot = h;
+        if (reviewMode === 3 && !tot && (clean.includes('total') || clean.includes('score') || clean.includes('mark'))) tot = h;
       }
       // Total column
-      else if (!tot && (clean.includes('total') || clean === 'score' || clean.includes('marks'))) {
+      else if (!tot && (clean.includes('total') || clean === 'score' || clean === 'marks' || clean.includes('grand total'))) {
         tot = h;
       }
     });
@@ -189,14 +217,40 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
           ? REVIEW_2_RUBRICS
           : REVIEW_3_RUBRICS;
 
-      currentRubrics.forEach((crit) => {
-        const critWords = crit.name.toLowerCase().split(/[\s,&+/()]+/);
-        const match = headers.find((h) => {
-          const lh = h.toLowerCase();
-          return critWords.filter((w) => w.length > 3).some((word) => lh.includes(word));
+      currentRubrics.forEach((crit, index) => {
+        const cNum = `c${index + 1}`;
+        const critNumStr = `criterion ${index + 1}`;
+        const rubricNumStr = `rubric ${index + 1}`;
+
+        // 1. Check indexed match (e.g. "C1", "Criterion 1", "Rubric 1")
+        let matchedHeader = headers.find((h) => {
+          const lh = h.toLowerCase().trim();
+          return (
+            lh === cNum ||
+            lh.startsWith(`${cNum} `) ||
+            lh.startsWith(`${cNum}:`) ||
+            lh.startsWith(`${cNum}-`) ||
+            lh.startsWith(`${cNum}_`) ||
+            lh.startsWith(`c${index + 1}(`) ||
+            lh.includes(critNumStr) ||
+            lh.includes(rubricNumStr)
+          );
         });
-        if (match) {
-          rMap[crit.id] = match;
+
+        // 2. Keyword match against criterion name
+        if (!matchedHeader) {
+          const critWords = crit.name
+            .toLowerCase()
+            .split(/[\s,&+/()]+/)
+            .filter((w) => w.length > 3);
+          matchedHeader = headers.find((h) => {
+            const lh = h.toLowerCase();
+            return critWords.some((word) => lh.includes(word));
+          });
+        }
+
+        if (matchedHeader) {
+          rMap[crit.id] = matchedHeader;
         }
       });
     }
@@ -220,46 +274,52 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
   }, [selectedReview, rawHeaders]);
 
   // ── Handle File Upload ─────────────────────────────────────────────
-  const parseFile = (file: File) => {
+  const parseFile = async (file: File) => {
     setFileName(file.name);
     const ext = file.name.split('.').pop()?.toLowerCase();
 
-    if (ext === 'csv') {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (res) => {
-          const headers = res.meta.fields || [];
-          setRawHeaders(headers);
-          setRawRows(res.data as Record<string, any>[]);
-          autoDetectColumns(headers, selectedReview);
-          setStep('map');
-        },
-        error: (err) => {
-          alert(`CSV parse error: ${err.message}`);
-        },
-      });
-    } else {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const wb = XLSX.read(e.target?.result, { type: 'binary' });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          const data: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
-          if (data.length === 0) {
-            alert('The uploaded sheet is empty.');
-            return;
-          }
-          const headers = Object.keys(data[0]);
-          setRawHeaders(headers);
-          setRawRows(data);
-          autoDetectColumns(headers, selectedReview);
-          setStep('map');
-        } catch {
-          alert('Could not read Excel file. Please ensure it is a valid .xlsx or .xls file.');
+    try {
+      if (ext === 'csv') {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (res) => {
+            const headers = (res.meta.fields || []).filter((h) => Boolean(h && h.trim()));
+            setRawHeaders(headers);
+            setRawRows(res.data as Record<string, any>[]);
+            autoDetectColumns(headers, selectedReview);
+            setStep('map');
+          },
+          error: (err) => {
+            showToast('CSV Parsing Error', err.message, 'error');
+          },
+        });
+      } else {
+        const buffer = await file.arrayBuffer();
+        const data = new Uint8Array(buffer);
+        const wb = XLSX.read(data, { type: 'array' });
+        
+        if (!wb.SheetNames || wb.SheetNames.length === 0) {
+          showToast('Invalid Excel File', 'No sheets found in workbook.', 'error');
+          return;
         }
-      };
-      reader.readAsBinaryString(file);
+
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        
+        if (rows.length === 0) {
+          showToast('Empty Sheet', 'The uploaded Excel sheet contains no data rows.', 'warning');
+          return;
+        }
+
+        const headers = Object.keys(rows[0]).filter((h) => Boolean(h && h.trim()));
+        setRawHeaders(headers);
+        setRawRows(rows);
+        autoDetectColumns(headers, selectedReview);
+        setStep('map');
+      }
+    } catch (err: any) {
+      showToast('File Read Error', err.message || 'Could not parse spreadsheet.', 'error');
     }
   };
 
@@ -273,24 +333,25 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
   // ── Validate & Build Preview Rows ──────────────────────────────────
   const handleValidateAndPreview = () => {
     if (!teamNumberCol) {
-      alert('Please map the Team Number column.');
+      showToast('Missing Field', 'Please select which column contains the Team Number.', 'warning');
       return;
     }
 
-    const teamNumMap = new Map(teams.map((t) => [t.team_number.trim().toUpperCase(), t]));
     const results: ParsedReviewRow[] = [];
 
     rawRows.forEach((row) => {
-      const tNum = String(row[teamNumberCol] || '').trim();
-      if (!tNum) return;
+      const rawTNum = String(row[teamNumberCol] || '').trim();
+      if (!rawTNum) return;
 
-      const teamObj = teamNumMap.get(tNum.toUpperCase());
+      const teamObj = findMatchingTeam(rawTNum);
       const warnings: string[] = [];
 
       if (!teamObj) {
-        warnings.push(`Team "${tNum}" not found in registered teams.`);
+        warnings.push(`Team "${rawTNum}" not found in registered teams ledger.`);
       }
 
+      const effectiveTeamNumber = teamObj ? teamObj.team_number : rawTNum;
+      const effectiveTeamName = teamObj?.team_name || (teamNameCol ? String(row[teamNameCol] || '').trim() : '');
       const commentVal = commentsCol ? String(row[commentsCol] || '').trim() : '';
       const judgeVal = judgeCol ? String(row[judgeCol] || '').trim() : (user?.username || 'admin1');
 
@@ -306,7 +367,7 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
           if (rawScore !== null && !isNaN(rawScore)) {
             const clamped = Math.min(crit.max_score, Math.max(0, rawScore));
             if (rawScore > crit.max_score || rawScore < 0) {
-              warnings.push(`${crit.name} score ${rawScore} clamped to ${clamped}/${crit.max_score}.`);
+              warnings.push(`${crit.name} score (${rawScore}) capped to ${clamped}/${crit.max_score}.`);
             }
             rubricScores.push({
               criterion_id: crit.id,
@@ -336,8 +397,9 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
         }
 
         results.push({
-          team_number: tNum,
-          team_name: teamObj?.team_name || (teamNameCol ? String(row[teamNameCol] || '') : ''),
+          team_number: effectiveTeamNumber,
+          matched_team: teamObj,
+          team_name: effectiveTeamName,
           rubric_scores: rubricScores,
           total_score: finalTotal,
           max_possible: roundMax,
@@ -355,8 +417,9 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
         const total = (r1Val || 0) + (r2Val || 0) + (r3Val || 0);
 
         results.push({
-          team_number: tNum,
-          team_name: teamObj?.team_name || (teamNameCol ? String(row[teamNameCol] || '') : ''),
+          team_number: effectiveTeamNumber,
+          matched_team: teamObj,
+          team_name: effectiveTeamName,
           rubric_scores: [
             { criterion_id: 'r1', criterion_name: 'Review 1 (Prelims)', score: r1Val || 0, max_score: 50 },
             { criterion_id: 'r2', criterion_name: 'Review 2 (Mains)', score: r2Val || 0, max_score: 50 },
@@ -371,6 +434,11 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
         });
       }
     });
+
+    if (results.length === 0) {
+      showToast('No Data', 'Could not find any team rows in the selected column.', 'warning');
+      return;
+    }
 
     setParsedRows(results);
     setStep('preview');
@@ -394,8 +462,8 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
         await importDetailedReviewMarks(importRecords);
         setImportSuccess(true);
         showToast(
-          'Rubric Marks Imported',
-          `Successfully saved ${roundTitle} evaluation marks for ${importRecords.length} teams to database.`,
+          'Rubric Marks Saved',
+          `Successfully saved ${roundTitle} evaluation marks for ${importRecords.length} teams.`,
           'success'
         );
       } else {
@@ -416,7 +484,7 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
         setImportSuccess(true);
         showToast(
           'All Marks Imported',
-          `Successfully imported evaluation marks for ${allRows.length} teams across all rounds.`,
+          `Successfully saved evaluation marks for ${allRows.length} teams across all reviews.`,
           'success'
         );
       }
@@ -426,6 +494,8 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
       setIsImporting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   const colOptions = ['', ...rawHeaders];
 
@@ -446,7 +516,7 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
                 Import &amp; Map Review Marks with Rubrics
               </h2>
               <p className="text-xs text-slate-400">
-                Select review round, upload spreadsheet, and map marks per rubric criterion.
+                Upload Excel or CSV sheet, select review round, and map rubric criteria.
               </p>
             </div>
           </div>
@@ -651,7 +721,7 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-bold text-white">{fileName}</span>
-                  <span className="text-xs text-slate-400">({rawRows.length} rows)</span>
+                  <span className="text-xs text-slate-400">({rawRows.length} rows loaded)</span>
                 </div>
                 <button
                   onClick={() => setStep('upload')}
@@ -714,7 +784,7 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
                       {roundTitle} Rubrics Criteria Mapping (Max {roundMax} Marks)
                     </h4>
                     <span className="text-[11px] text-slate-400">
-                      Map columns for each individual rubric
+                      Auto-matched with smart criteria detection
                     </span>
                   </div>
 
@@ -985,9 +1055,7 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
                         </thead>
                         <tbody className="divide-y divide-slate-800/80">
                           {parsedRows.map((row, idx) => {
-                            const isMatched = teams.some(
-                              (t) => t.team_number.trim().toUpperCase() === row.team_number.toUpperCase()
-                            );
+                            const isMatched = Boolean(row.matched_team);
                             const pct = Math.round((row.total_score / row.max_possible) * 100);
 
                             return (
@@ -1024,12 +1092,12 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
 
                                 <td className="px-3.5 py-2.5 text-center whitespace-nowrap">
                                   {isMatched ? (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                                      ✓ Matched
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                      <Check className="w-3 h-3" /> Matched
                                     </span>
                                   ) : (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                                      ⚠ Not in Teams
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                      <AlertTriangle className="w-3 h-3" /> New / Unmatched
                                     </span>
                                   )}
                                 </td>
@@ -1078,4 +1146,3 @@ export const MarksImportModal: React.FC<MarksImportModalProps> = ({ isOpen, onCl
     </div>
   );
 };
-

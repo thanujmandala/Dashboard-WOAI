@@ -288,9 +288,23 @@ export class SupabaseService {
 
   static async saveReview(review: Review, judgeUsername: string): Promise<boolean> {
     try {
-      // 1. Upsert review
+      // 1. Check if a review row already exists for this team and round to preserve/use stable ID
+      let reviewId = review.id;
+      const { data: existingRev } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('team_id', review.team_id)
+        .eq('review_number', review.review_number)
+        .maybeSingle();
+
+      if (existingRev?.id) {
+        reviewId = existingRev.id;
+      } else if (!reviewId) {
+        reviewId = `rev-${review.team_id}-${review.review_number}`;
+      }
+
       const reviewRow = {
-        id: review.id,
+        id: reviewId,
         team_id: review.team_id,
         team_number: review.team_number,
         review_number: review.review_number,
@@ -310,7 +324,7 @@ export class SupabaseService {
 
       const { error: revError } = await supabase
         .from('reviews')
-        .upsert(reviewRow, { onConflict: 'id' });
+        .upsert(reviewRow, { onConflict: 'team_id,review_number' });
 
       if (revError) {
         console.error('Error saving review to Supabase:', revError);
@@ -318,19 +332,19 @@ export class SupabaseService {
       }
 
       // 2. Delete existing scores for this review and re-insert
-      await supabase.from('review_scores').delete().eq('review_id', review.id);
+      await supabase.from('review_scores').delete().eq('review_id', reviewId);
 
-      const scoreRows = review.scores.map((s, idx) => ({
-        id: `score-${review.id}-${idx}-${Date.now()}`,
-        review_id: review.id,
-        criterion_id: s.criterion_id,
-        criterion_name: s.criterion_name,
-        score: s.score,
-        max_score: s.max_score,
-        comments: s.comments || '',
-      }));
+      if (review.scores && review.scores.length > 0) {
+        const scoreRows = review.scores.map((s, idx) => ({
+          id: `score-${reviewId}-${idx}-${Date.now()}`,
+          review_id: reviewId,
+          criterion_id: s.criterion_id,
+          criterion_name: s.criterion_name,
+          score: s.score,
+          max_score: s.max_score,
+          comments: s.comments || '',
+        }));
 
-      if (scoreRows.length > 0) {
         const { error: scoreError } = await supabase.from('review_scores').insert(scoreRows);
         if (scoreError) {
           console.error('Error inserting review scores to Supabase:', scoreError);
