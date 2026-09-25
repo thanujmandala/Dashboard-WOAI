@@ -83,7 +83,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadAll = useCallback(async () => {
     if (isSupabaseConfigured) {
       try {
-        await SupabaseService.seedDemoDataIfEmpty(user?.username || 'admin1');
         const [dbTeams, dbReviews, dbSettings, dbLogs] = await Promise.all([
           SupabaseService.getTeams(),
           SupabaseService.getReviews(),

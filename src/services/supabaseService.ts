@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 import type { Team, Review, CompetitionSettings, AuditLog } from '../types';
 import { SAMPLE_TEAMS, SAMPLE_INITIAL_REVIEWS } from '../constants/sampleTeams';
 import { DEFAULT_SETTINGS } from '../constants/rubrics';
+// Note: SAMPLE_TEAMS and SAMPLE_INITIAL_REVIEWS kept for resetToDemo() only — auto-seeding is disabled.
 
 export class SupabaseService {
   // 1. TEAMS
@@ -411,22 +412,11 @@ export class SupabaseService {
   }
 
   // 5. SEEDING & RESET ACTIONS
-  static async seedDemoDataIfEmpty(judgeUsername = 'admin1'): Promise<void> {
-    const teams = await this.getTeams();
-    if (teams.length === 0) {
-      await this.saveTeamsBulk(SAMPLE_TEAMS);
-      for (const rev of SAMPLE_INITIAL_REVIEWS) {
-        await this.saveReview(rev, rev.judge_username || judgeUsername);
-      }
-      await this.saveSettings(DEFAULT_SETTINGS, judgeUsername);
-      await this.addAuditLog({
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        judge_username: 'system',
-        action: 'data_reset',
-        details: 'Seeded initial 5 demo hackathon teams into Supabase database.',
-      });
-    }
+  // Auto-seeding is DISABLED — the app starts empty and only shows teams you import.
+  static async seedDemoDataIfEmpty(_judgeUsername = 'admin1'): Promise<void> {
+    // Intentionally left empty — no demo data is injected automatically.
+    // Use Settings > Reset to Demo if you want to restore sample data.
+    return;
   }
 
   static async resetToDemo(judgeUsername = 'admin1'): Promise<boolean> {
