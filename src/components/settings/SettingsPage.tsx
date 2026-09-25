@@ -8,7 +8,6 @@ import {
   Settings,
   Shield,
   Save,
-  RotateCcw,
   Trash2,
   Download,
   Upload,
@@ -25,7 +24,6 @@ export const SettingsPage: React.FC = () => {
   const {
     settings,
     updateSettings,
-    resetToDemo,
     clearAllReviews,
     auditLogs,
     showToast,
@@ -35,7 +33,7 @@ export const SettingsPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formSettings, setFormSettings] = useState<CompetitionSettings>({ ...settings });
-  const [modalAction, setModalAction] = useState<'reset_demo' | 'clear_reviews' | 'wipe_all' | null>(null);
+  const [modalAction, setModalAction] = useState<'clear_reviews' | 'wipe_all' | null>(null);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -364,16 +362,6 @@ export const SettingsPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setModalAction('reset_demo')}
-            className="p-4 rounded-xl bg-slate-950 hover:bg-slate-850 border border-slate-800 text-left transition-all group"
-          >
-            <RotateCcw className="w-5 h-5 text-amber-400 mb-2 group-hover:scale-110 transition-transform" />
-            <div className="text-xs font-bold text-white">Reset to Demo Teams</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Restore initial 5 demo teams</div>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setModalAction('clear_reviews')}
             className="p-4 rounded-xl bg-slate-950 hover:bg-slate-850 border border-slate-800 text-left transition-all group"
           >
@@ -407,19 +395,6 @@ export const SettingsPage: React.FC = () => {
           ))}
         </div>
       </div>
-
-      <ConfirmationModal
-        isOpen={modalAction === 'reset_demo'}
-        onClose={() => setModalAction(null)}
-        onConfirm={() => {
-          resetToDemo();
-          setModalAction(null);
-        }}
-        title="Reset to Demo Data?"
-        message="This will restore the 5 initial sample teams and baseline reviews for testing."
-        confirmText="Yes, Restore Demo Data"
-        type="warning"
-      />
 
       <ConfirmationModal
         isOpen={modalAction === 'clear_reviews'}

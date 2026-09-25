@@ -42,7 +42,6 @@ export const ReviewEvaluationPage: React.FC<ReviewEvaluationPageProps> = ({
     saveReview,
     unlockReview,
     openImportModal,
-    resetToDemo,
   } = useData();
 
   const rubrics = REVIEW_RUBRIC_MAP[roundNumber] || [];
@@ -252,11 +251,9 @@ export const ReviewEvaluationPage: React.FC<ReviewEvaluationPageProps> = ({
       <EmptyState
         icon="teams"
         title="No Teams Available for Evaluation"
-        description="Please upload team spreadsheet or load sample teams first."
+        description="Please upload team spreadsheet or register teams first."
         actionText="Import Teams"
         onAction={openImportModal}
-        secondaryActionText="Load Demo Teams"
-        onSecondaryAction={resetToDemo}
       />
     );
   }

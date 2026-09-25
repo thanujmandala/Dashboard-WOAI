@@ -24,7 +24,7 @@ interface MarksLedgerProps {
 }
 
 export const MarksLedger: React.FC<MarksLedgerProps> = () => {
-  const { summaries, settings, teams, reviews, openImportModal, openMarksImport, openEditMarks, resetToDemo } = useData();
+  const { summaries, settings, teams, reviews, openImportModal, openMarksImport, openEditMarks } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEligibility, setFilterEligibility] = useState<'all' | 'eligible' | 'not_eligible'>('all');
@@ -162,11 +162,9 @@ export const MarksLedger: React.FC<MarksLedgerProps> = () => {
       <EmptyState
         icon="marks"
         title="No Score Data Available"
-        description="Please import teams spreadsheet or load demo teams to see evaluation marks."
+        description="Please import teams spreadsheet or register teams to see evaluation marks."
         actionText="Import Teams"
         onAction={openImportModal}
-        secondaryActionText="Load Demo Teams"
-        onSecondaryAction={resetToDemo}
       />
     );
   }

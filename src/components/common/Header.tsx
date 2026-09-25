@@ -9,7 +9,6 @@ import {
   Moon,
   Sun,
   Shield,
-  Sparkles,
   Database,
 } from 'lucide-react';
 
@@ -31,7 +30,6 @@ export const Header: React.FC<HeaderProps> = ({
     toggleTheme,
     openQuickEvaluate,
     openImportModal,
-    teams,
     isDatabaseConnected,
   } = useData();
 
@@ -70,8 +68,6 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  const hasDemoData = teams.some((t) => t.is_demo);
-
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 py-3.5 bg-slate-950/85 backdrop-blur-xl border-b border-slate-800/80">
       {/* Left: Mobile Hamburger + Breadcrumb */}
@@ -92,11 +88,6 @@ export const Header: React.FC<HeaderProps> = ({
             {isDatabaseConnected && (
               <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                 <Database className="w-3 h-3" /> Supabase Live
-              </span>
-            )}
-            {hasDemoData && (
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                <Sparkles className="w-3 h-3" /> Demo Mode
               </span>
             )}
           </div>

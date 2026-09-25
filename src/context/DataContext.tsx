@@ -75,7 +75,6 @@ interface DataContextType {
   deleteTeam: (teamId: string) => Promise<void>;
   deleteTeamsBulk: (teamIds: string[]) => Promise<void>;
   updateSettings: (newSettings: CompetitionSettings) => Promise<void>;
-  resetToDemo: () => Promise<void>;
   clearAllReviews: () => Promise<void>;
   clearAllTeams: () => Promise<void>;
   refreshData: () => Promise<void>;
@@ -370,15 +369,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast('Settings Saved', 'Competition rubrics & weights updated on database.', 'success');
   };
 
-  const resetToDemo = async () => {
-    if (isSupabaseConfigured) {
-      await SupabaseService.resetToDemo(user?.username || 'admin1');
-    }
-    StorageService.resetToDemoData(user?.username || 'admin1');
-    await loadAll();
-    showToast('Demo Teams Loaded', 'Initial 5 demo teams and rubrics restored on Supabase.', 'info');
-  };
-
   const clearAllReviewsAction = async () => {
     if (isSupabaseConfigured) {
       await SupabaseService.clearAllReviews(user?.username || 'admin1');
@@ -552,7 +542,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteTeam,
         deleteTeamsBulk: deleteTeamsBulkAction,
         updateSettings,
-        resetToDemo,
         clearAllReviews: clearAllReviewsAction,
         clearAllTeams: clearAllTeamsAction,
         refreshData: loadAll,

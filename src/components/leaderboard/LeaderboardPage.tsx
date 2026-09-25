@@ -150,7 +150,7 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onStartReview,
           <Trophy className="w-16 h-16 text-amber-400/50 mx-auto mb-4" />
           <h2 className="text-2xl font-extrabold text-white mb-2">No Teams Yet</h2>
           <p className="text-slate-400 text-sm mb-6 max-w-xs">
-            Import teams from a spreadsheet or load demo data to see the leaderboard.
+            Import teams from a spreadsheet or register teams to see the leaderboard.
           </p>
           <button
             onClick={() => onNavigateTab('teams')}
