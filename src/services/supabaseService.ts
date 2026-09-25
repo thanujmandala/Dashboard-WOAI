@@ -185,6 +185,7 @@ export class SupabaseService {
   static async deleteTeam(teamId: string): Promise<boolean> {
     try {
       await supabase.from('team_members').delete().eq('team_id', teamId);
+      await supabase.from('reviews').delete().eq('team_id', teamId);
       const { error } = await supabase.from('teams').delete().eq('id', teamId);
       if (error) {
         console.error('Error deleting team:', error);
@@ -193,6 +194,23 @@ export class SupabaseService {
       return true;
     } catch (err) {
       console.error('deleteTeam failed:', err);
+      return false;
+    }
+  }
+
+  static async deleteTeamsBulk(teamIds: string[]): Promise<boolean> {
+    try {
+      if (teamIds.length === 0) return true;
+      await supabase.from('team_members').delete().in('team_id', teamIds);
+      await supabase.from('reviews').delete().in('team_id', teamIds);
+      const { error } = await supabase.from('teams').delete().in('id', teamIds);
+      if (error) {
+        console.error('Error deleting teams in bulk:', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('deleteTeamsBulk failed:', err);
       return false;
     }
   }

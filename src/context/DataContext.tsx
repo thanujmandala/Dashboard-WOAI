@@ -73,6 +73,7 @@ interface DataContextType {
   importTeams: (newTeams: Team[], mode: 'append' | 'replace' | 'overwrite') => Promise<{ added: number; updated: number; skipped: number }>;
   importMarksFromExcel: (rows: { team_number: string; r1?: number | null; r2?: number | null; r3?: number | null }[]) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
+  deleteTeamsBulk: (teamIds: string[]) => Promise<void>;
   updateSettings: (newSettings: CompetitionSettings) => Promise<void>;
   resetToDemo: () => Promise<void>;
   clearAllReviews: () => Promise<void>;
@@ -350,6 +351,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast('Team Deleted', 'The team has been removed from database.', 'info');
   };
 
+  const deleteTeamsBulkAction = async (teamIds: string[]) => {
+    if (teamIds.length === 0) return;
+    if (isSupabaseConfigured) {
+      await SupabaseService.deleteTeamsBulk(teamIds);
+    }
+    StorageService.deleteTeamsBulk(teamIds);
+    await loadAll();
+    showToast('Teams Deleted', `Successfully deleted ${teamIds.length} team(s) from database.`, 'info');
+  };
+
   const updateSettings = async (newSettings: CompetitionSettings) => {
     if (isSupabaseConfigured) {
       await SupabaseService.saveSettings(newSettings, user?.username || 'admin1');
@@ -539,6 +550,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         importTeams,
         importMarksFromExcel,
         deleteTeam,
+        deleteTeamsBulk: deleteTeamsBulkAction,
         updateSettings,
         resetToDemo,
         clearAllReviews: clearAllReviewsAction,

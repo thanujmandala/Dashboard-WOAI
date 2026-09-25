@@ -57,6 +57,13 @@ export class StorageService {
     this.saveTeams(teams);
   }
 
+  static deleteTeamsBulk(teamIds: string[]) {
+    const remainingTeams = this.getTeams().filter((t) => !teamIds.includes(t.id));
+    this.saveTeams(remainingTeams);
+    const remainingReviews = this.getReviews().filter((r) => !teamIds.includes(r.team_id));
+    this.saveReviews(remainingReviews);
+  }
+
   static getReviews(): Review[] {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.REVIEWS);

@@ -1,12 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
-import type { TeamScoreSummary } from '../../types';
 import {
   exportMarksToExcel,
   exportMarksToCSV,
   exportMarksToPDF,
 } from '../../utils/exporter';
-import { ScorecardModal } from './ScorecardModal';
 import { EmptyState } from '../common/EmptyState';
 import {
   Search,
@@ -22,10 +20,10 @@ import {
 } from 'lucide-react';
 
 interface MarksLedgerProps {
-  onStartReview: (roundNumber: 1 | 2 | 3, teamNumber: string) => void;
+  onStartReview?: (roundNumber: 1 | 2 | 3, teamNumber: string) => void;
 }
 
-export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
+export const MarksLedger: React.FC<MarksLedgerProps> = () => {
   const { summaries, settings, teams, reviews, openImportModal, openMarksImport, openEditMarks, resetToDemo } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,8 +39,6 @@ export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  const [selectedScorecard, setSelectedScorecard] = useState<TeamScoreSummary | null>(null);
 
   const judgesList = useMemo(() => {
     const set = new Set<string>();
@@ -449,7 +445,7 @@ export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
                       <ArrowUpDown className="w-3 h-3 text-slate-500" />
                     </div>
                   </th>
-                  <th className="p-3.5 text-right">Scorecard</th>
+                  <th className="p-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80 bg-slate-900/40">
@@ -457,7 +453,7 @@ export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
                   return (
                     <tr
                       key={s.team.id}
-                      onClick={() => setSelectedScorecard(s)}
+                      onClick={() => openEditMarks(s)}
                       className="hover:bg-slate-800/50 transition-colors group cursor-pointer"
                     >
                       <td className="p-3.5 font-mono font-bold text-slate-400">
@@ -576,23 +572,14 @@ export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
                       </td>
 
                       <td className="p-3.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => openEditMarks(s)}
-                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-colors"
-                            title="Edit marks for Review 1, 2, and 3"
-                          >
-                            <FileEdit className="w-3.5 h-3.5" />
-                            <span>Edit Marks</span>
-                          </button>
-
-                          <button
-                            onClick={() => setSelectedScorecard(s)}
-                            className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
-                          >
-                            Scorecard
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => openEditMarks(s)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all ml-auto"
+                          title="Edit evaluation marks for Review 1, 2, and 3"
+                        >
+                          <FileEdit className="w-3.5 h-3.5" />
+                          <span>Edit Marks</span>
+                        </button>
                       </td>
                     </tr>
                   );
@@ -645,13 +632,6 @@ export const MarksLedger: React.FC<MarksLedgerProps> = ({ onStartReview }) => {
           </div>
         </div>
       )}
-
-      <ScorecardModal
-        summary={selectedScorecard}
-        settings={settings}
-        onClose={() => setSelectedScorecard(null)}
-        onOpenEvaluation={onStartReview}
-      />
     </div>
   );
 };

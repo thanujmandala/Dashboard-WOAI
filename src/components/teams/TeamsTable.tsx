@@ -28,8 +28,10 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
     openAddTeam,
     openEditTeam,
     deleteTeam,
+    deleteTeamsBulk,
   } = useData();
 
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStage, setFilterStage] = useState<'all' | 'r1_pending' | 'r1_done' | 'r2_done' | 'r3_done' | 'eligible'>('all');
   const [sortField, setSortField] = useState<'number' | 'name' | 'ps_id'>('number');
@@ -107,6 +109,42 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
     }
   };
 
+  const toggleSelectTeam = (teamId: string) => {
+    setSelectedTeamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allOnPage = paginatedTeams.map((t) => t.id);
+    const isAllSelected = allOnPage.length > 0 && allOnPage.every((id) => selectedTeamIds.has(id));
+
+    setSelectedTeamIds((prev) => {
+      const next = new Set(prev);
+      if (isAllSelected) {
+        allOnPage.forEach((id) => next.delete(id));
+      } else {
+        allOnPage.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedTeamIds.size;
+    if (count === 0) return;
+    if (confirm(`Are you sure you want to delete ${count} selected team(s)? This will permanently remove their records.`)) {
+      await deleteTeamsBulk(Array.from(selectedTeamIds));
+      setSelectedTeamIds(new Set());
+    }
+  };
+
   if (teams.length === 0) {
     return (
       <EmptyState
@@ -177,6 +215,33 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
         </div>
       </div>
 
+      {/* Bulk Action Banner */}
+      {selectedTeamIds.size > 0 && (
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+            <span className="font-bold text-indigo-200">
+              {selectedTeamIds.size} team{selectedTeamIds.size > 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedTeamIds(new Set())}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors font-medium"
+            >
+              Deselect All
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg shadow-rose-600/20 transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Selected ({selectedTeamIds.size})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Teams Table */}
       {filteredTeams.length === 0 ? (
         <EmptyState
@@ -195,6 +260,18 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-950 font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                 <tr>
+                  <th className="p-3.5 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={
+                        paginatedTeams.length > 0 &&
+                        paginatedTeams.every((t) => selectedTeamIds.has(t.id))
+                      }
+                      onChange={toggleSelectAll}
+                      className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      title="Select / Deselect all on current page"
+                    />
+                  </th>
                   <th
                     onClick={() => toggleSort('name')}
                     className="p-3.5 cursor-pointer hover:text-white transition-colors min-w-[260px]"
@@ -228,6 +305,15 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({ onStartReview }) => {
                       className="hover:bg-slate-800/50 transition-colors group cursor-pointer"
                       onClick={() => openTeamDrawer(team)}
                     >
+                      <td className="p-3.5 text-center w-10" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedTeamIds.has(team.id)}
+                          onChange={() => toggleSelectTeam(team.id)}
+                          className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
+
                       <td className="p-3.5 font-bold text-white">
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-2">
