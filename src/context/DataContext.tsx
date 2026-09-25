@@ -14,6 +14,24 @@ export interface ToastMessage {
   message?: string;
 }
 
+export interface RubricImportScore {
+  criterion_id: string;
+  criterion_name: string;
+  score: number;
+  max_score: number;
+  comments?: string;
+}
+
+export interface DetailedReviewImportRecord {
+  team_number: string;
+  review_number: 1 | 2 | 3;
+  scores: RubricImportScore[];
+  total_score: number;
+  max_possible_score: number;
+  comments?: string;
+  judge_username?: string;
+}
+
 interface DataContextType {
   teams: Team[];
   reviews: Review[];
@@ -72,6 +90,7 @@ interface DataContextType {
   unlockReview: (teamId: string, reviewNumber: 1 | 2 | 3, reason: string) => Promise<boolean>;
   importTeams: (newTeams: Team[], mode: 'append' | 'replace' | 'overwrite') => Promise<{ added: number; updated: number; skipped: number }>;
   importMarksFromExcel: (rows: { team_number: string; r1?: number | null; r2?: number | null; r3?: number | null }[]) => Promise<void>;
+  importDetailedReviewMarks: (records: DetailedReviewImportRecord[]) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
   deleteTeamsBulk: (teamIds: string[]) => Promise<void>;
   updateSettings: (newSettings: CompetitionSettings) => Promise<void>;
@@ -498,6 +517,60 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await loadAll();
   };
 
+  const importDetailedReviewMarks = async (
+    records: DetailedReviewImportRecord[]
+  ): Promise<void> => {
+    const judgeUser = user?.username || 'admin1';
+    const teamMap = new Map(teams.map(t => [t.team_number.trim().toUpperCase(), t]));
+    let importedCount = 0;
+
+    for (const rec of records) {
+      const team = teamMap.get(rec.team_number.trim().toUpperCase());
+      if (!team) continue;
+
+      const reviewItem: Review = {
+        id: `rev-rubric-${team.id}-${rec.review_number}-${Date.now()}-${importedCount}`,
+        team_id: team.id,
+        team_number: team.team_number,
+        review_number: rec.review_number,
+        judge_id: `judge-${rec.judge_username || judgeUser}`,
+        judge_username: rec.judge_username || judgeUser,
+        scores: rec.scores.map(s => ({
+          criterion_id: s.criterion_id,
+          criterion_name: s.criterion_name,
+          score: s.score,
+          max_score: s.max_score,
+          comments: s.comments || '',
+        })),
+        total_score: rec.total_score,
+        max_possible_score: rec.max_possible_score,
+        comments: rec.comments || `Imported Review ${rec.review_number} marks with rubric mapping`,
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_locked: true,
+      };
+
+      if (isSupabaseConfigured) {
+        await SupabaseService.saveReview(reviewItem, reviewItem.judge_username);
+      }
+      StorageService.saveSingleReview(reviewItem, reviewItem.judge_username);
+      importedCount++;
+    }
+
+    if (isSupabaseConfigured) {
+      await SupabaseService.addAuditLog({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        judge_username: judgeUser,
+        action: 'data_import',
+        details: `Imported rubric marks for ${importedCount} review evaluation(s) from spreadsheet.`,
+      });
+    }
+
+    await loadAll();
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -539,6 +612,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         unlockReview,
         importTeams,
         importMarksFromExcel,
+        importDetailedReviewMarks,
         deleteTeam,
         deleteTeamsBulk: deleteTeamsBulkAction,
         updateSettings,

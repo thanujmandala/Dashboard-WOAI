@@ -282,3 +282,90 @@ export function downloadSampleTemplate(format: 'xlsx' | 'csv' = 'xlsx') {
     document.body.removeChild(link);
   }
 }
+
+export function downloadReviewMarksTemplate(
+  round: 1 | 2 | 3 | 'all',
+  teams: { team_number: string; team_name: string }[] = [],
+  format: 'xlsx' | 'csv' = 'xlsx'
+) {
+  const baseTeams = teams.length > 0 ? teams.slice(0, 50) : [
+    { team_number: 'WOAI-101', team_name: 'Alpha Vision AI' },
+    { team_number: 'WOAI-102', team_name: 'RoboHarvest Systems' },
+    { team_number: 'WOAI-103', team_name: 'MedScribe Intelligence' },
+  ];
+
+  let sampleData: Record<string, any>[] = [];
+  let fileName = '';
+
+  if (round === 1) {
+    fileName = 'Review_1_Rubrics_Marks_Template';
+    sampleData = baseTeams.map((t) => ({
+      'Team Number': t.team_number,
+      'Team Name': t.team_name,
+      'Problem Understanding & Clarity (Max 10)': '',
+      'Target User Identification (Max 10)': '',
+      'Ideology / Insight (Max 10)': '',
+      'Uniqueness & Feasibility (Max 10)': '',
+      'Technical Reasoning + Communication & Q/A (Max 10)': '',
+      'Review 1 Total Score (Max 50)': '',
+      'Judge Feedback / Comments': '',
+    }));
+  } else if (round === 2) {
+    fileName = 'Review_2_Rubrics_Marks_Template';
+    sampleData = baseTeams.map((t) => ({
+      'Team Number': t.team_number,
+      'Team Name': t.team_name,
+      'Functional Prototype (Max 10)': '',
+      'Technical Architecture (Max 10)': '',
+      'Constraint Compliance (Max 10)': '',
+      'Innovation & UX (Max 10)': '',
+      'Performance + Security & Privacy (Max 10)': '',
+      'Review 2 Total Score (Max 50)': '',
+      'Judge Feedback / Comments': '',
+    }));
+  } else if (round === 3) {
+    fileName = 'Review_3_Rubrics_Marks_Template';
+    sampleData = baseTeams.map((t) => ({
+      'Team Number': t.team_number,
+      'Team Name': t.team_name,
+      'Real-World Impact (Max 20)': '',
+      'Technical Depth (Max 20)': '',
+      'Innovation / Differentiation (Max 20)': '',
+      'Scalability + Robustness Under Failure (Max 20)': '',
+      'Business Feasibility + Crisis Response (Max 20)': '',
+      'Review 3 Total Score (Max 100)': '',
+      'Judge Feedback / Comments': '',
+    }));
+  } else {
+    fileName = 'All_Reviews_Marks_Template';
+    sampleData = baseTeams.map((t) => ({
+      'Team Number': t.team_number,
+      'Team Name': t.team_name,
+      'Review 1 /50': '',
+      'Review 2 /50': '',
+      'Review 3 /100': '',
+      'Judge Feedback / Comments': '',
+    }));
+  }
+
+  if (format === 'xlsx') {
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Marks_Template');
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+  } else {
+    const headers = Object.keys(sampleData[0]);
+    const rows = sampleData.map((d: any) =>
+      headers.map((h) => `"${(d[h] || '').toString().replace(/"/g, '""')}"`)
+    );
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', `${fileName}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
+
